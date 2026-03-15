@@ -1,0 +1,12 @@
+# 本地开发：代码挂载到容器，改完自动重载，无需重建镜像
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      FLASK_DEBUG: "1"
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - .:/app
+    command: python app.py

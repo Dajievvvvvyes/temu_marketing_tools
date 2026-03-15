@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Temu 活动申报价格处理</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --border: #2d3a4d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --accent-hover: #79b8ff;
+      --success: #3fb950;
+      --error: #f85149;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Noto Sans SC', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin: 0 0 1.5rem;
+      letter-spacing: -0.02em;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+    .card h2 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin: 0 0 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .rules {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+    .rules ul {
+      margin: 0;
+      padding-left: 1.25rem;
+    }
+    .rules li { margin-bottom: 0.35rem; }
+    .rules li strong { color: var(--text); }
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(88, 166, 255, 0.06);
+    }
+    .upload-zone input { display: none; }
+    .upload-zone .icon {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      opacity: 0.8;
+    }
+    .upload-zone .hint { color: var(--text-muted); font-size: 0.875rem; }
+    .btn {
+      display: inline-block;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      font-family: inherit;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:disabled {
+      background: var(--border);
+      cursor: not-allowed;
+      color: var(--text-muted);
+    }
+    .btn-outline {
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+    .btn-outline:hover {
+      background: rgba(88, 166, 255, 0.15);
+    }
+    .result { display: none; }
+    .result.visible { display: block; }
+    .result .message {
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+    }
+    .result .message.error { background: rgba(248, 81, 73, 0.15); color: var(--error); }
+    .result .message.success { background: rgba(63, 185, 80, 0.15); color: var(--success); }
+    .files {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .files li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.6rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.875rem;
+    }
+    .files li:last-child { border-bottom: none; }
+    .files .name { color: var(--text); }
+    .files .download {
+      margin-left: 0.75rem;
+      flex-shrink: 0;
+    }
+    .reupload-wrap { margin-top: 1.25rem; }
+    .loading {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 1rem;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+    .loading.visible { display: flex; }
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Temu 活动申报价格处理</h1>
+
+    <div class="card">
+      <h2>活动申报价格处理规则说明</h2>
+      <div class="rules">
+        <ul>
+          <li><strong>24-12×16in</strong>：活动申报价格 &lt; 76.4 则删除该行；≥ 76.4 则固定为 76.4</li>
+          <li><strong>24-16×20in</strong>：活动申报价格 &lt; 103 则删除该行；≥ 103 则固定为 103</li>
+          <li><strong>36-12×16in</strong>：活动申报价格 &lt; 114 则删除该行；≥ 114 则固定为 114</li>
+          <li><strong>36-16×20in</strong>：活动申报价格 &lt; 145 则删除该行；≥ 145 则固定为 145</li>
+          <li>SKU 货号不包含以上四种尺寸的商品将拆分为独立文件「其他尺寸活动商品」</li>
+          <li>处理后的商品按「活动类型(活动主题)」列拆分为多个 Excel，同一活动类型一个文件</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card" id="upload-card">
+      <h2>上传 Excel</h2>
+      <div class="upload-zone" id="zone">
+        <input type="file" id="file" accept=".xlsx,.xls">
+        <div class="icon">📁</div>
+        <div>点击或拖拽上传 .xlsx / .xls 文件</div>
+        <div class="hint">表格需包含：SKU货号、活动申报价格、活动类型(活动主题)</div>
+      </div>
+      <div class="loading" id="loading">
+        <span class="spinner"></span>
+        <span>处理中…</span>
+      </div>
+    </div>
+
+    <div class="card result" id="result">
+      <h2>处理结果</h2>
+      <div id="result-message"></div>
+      <ul class="files" id="file-list"></ul>
+      <div class="reupload-wrap">
+        <button type="button" class="btn btn-outline" id="reupload">重新上传</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const zone = document.getElementById('zone');
+    const fileInput = document.getElementById('file');
+    const loading = document.getElementById('loading');
+    const resultEl = document.getElementById('result');
+    const resultMessage = document.getElementById('result-message');
+    const fileList = document.getElementById('file-list');
+    const reuploadBtn = document.getElementById('reupload');
+
+    zone.addEventListener('click', () => fileInput.click());
+    zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+    zone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      zone.classList.remove('dragover');
+      const f = e.dataTransfer?.files?.[0];
+      if (f && /\.(xlsx|xls)$/i.test(f.name)) upload(f);
+    });
+    fileInput.addEventListener('change', () => {
+      const f = fileInput.files?.[0];
+      if (f) upload(f);
+    });
+
+    reuploadBtn.addEventListener('click', () => {
+      resultEl.classList.remove('visible');
+      fileInput.value = '';
+    });
+
+    async function upload(file) {
+      loading.classList.add('visible');
+      resultEl.classList.remove('visible');
+      const form = new FormData();
+      form.append('file', file);
+
+      try {
+        const res = await fetch('/api/upload', { method: 'POST', body: form });
+        const data = await res.json();
+        showResult(data);
+      } catch (e) {
+        showResult({ success: false, error: '网络错误：' + e.message });
+      } finally {
+        loading.classList.remove('visible');
+      }
+    }
+
+    function showResult(data) {
+      resultEl.classList.add('visible');
+      if (!data.success) {
+        resultMessage.className = 'message error';
+        resultMessage.textContent = data.error || '处理失败';
+        fileList.innerHTML = '';
+        return;
+      }
+      resultMessage.className = 'message success';
+      resultMessage.textContent = '处理完成，可下载以下文件：';
+      const outputId = data.output_id;
+      fileList.innerHTML = (data.files || []).map(f => `
+        <li>
+          <span class="name">${escapeHtml(f.name)}</span>
+          <a class="btn btn-primary download" href="/api/download/${outputId}/${encodeURIComponent(f.name)}" download>下载</a>
+        </li>
+      `).join('');
+    }
+
+    function escapeHtml(s) {
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
