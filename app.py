@@ -22,7 +22,6 @@ OUTPUT_DIR = BASE_DIR / "outputs"
 
 app = Flask(__name__, static_folder=str(BASE_DIR / "static"))
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB
-<<<<<<< HEAD
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -41,12 +40,6 @@ def not_found(e):
 def server_error(e):
     logger.exception("Internal Server Error")
     return jsonify({"success": False, "error": "服务器内部错误"}), 500
-=======
-# 上传与输出目录（相对项目根目录）
-UPLOAD_DIR = Path("uploads")
-OUTPUT_DIR = Path("outputs")
-# 允许上传的 Excel 扩展名
->>>>>>> ea87d75 (feat: 优化多sheet处理并支持一键下载全部)
 ALLOWED = {"xlsx", "xls"}
 
 # 尺寸规则: (关键字, 最低价, 达标后固定价格)
@@ -57,6 +50,15 @@ SIZE_RULES = [
     ("36-16*20in", 145, 145),
 ]
 SIZE_KEYWORDS = [r[0] for r in SIZE_RULES]
+
+
+def _normalize_size_text(s):
+    """统一尺寸字符，避免符号/空白差异导致规则漏匹配。"""
+    t = str(s).strip().lower()
+    t = t.replace("×", "*").replace("✕", "*").replace("╳", "*").replace("x", "*").replace("＊", "*")
+    t = t.replace("－", "-").replace("–", "-").replace("—", "-")
+    t = re.sub(r"\s+", "", t)
+    return t
 
 
 def _col(df, *candidates):
@@ -129,12 +131,14 @@ def process_excel(filepath):
     # 匹配尺寸
     def match_size(s):
         # SKU 包含任一尺寸关键字即判定为对应尺寸
+        s_norm = _normalize_size_text(s)
         for kw in SIZE_KEYWORDS:
-            if kw in s:
+            if _normalize_size_text(kw) in s_norm:
                 return kw
         return None
 
     df["_size"] = sku.apply(match_size)
+    logger.info("尺寸命中统计: %s", df["_size"].value_counts(dropna=False).to_dict())
 
     # 未匹配到规则尺寸的商品 -> 单独导出一个文件
     other = df[df["_size"].isna()].drop(columns=["_size"])
