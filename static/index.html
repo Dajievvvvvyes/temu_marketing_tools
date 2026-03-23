@@ -142,6 +142,12 @@
       flex-shrink: 0;
     }
     .reupload-wrap { margin-top: 1.25rem; }
+    .actions {
+      margin-top: 1rem;
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
     .loading {
       display: none;
       align-items: center;
@@ -199,6 +205,7 @@
       <h2>处理结果</h2>
       <div id="result-message"></div>
       <ul class="files" id="file-list"></ul>
+      <div class="actions" id="actions"></div>
       <div class="reupload-wrap">
         <button type="button" class="btn btn-outline" id="reupload">重新上传</button>
       </div>
@@ -212,6 +219,7 @@
     const resultEl = document.getElementById('result');
     const resultMessage = document.getElementById('result-message');
     const fileList = document.getElementById('file-list');
+    const actionsEl = document.getElementById('actions');
     const reuploadBtn = document.getElementById('reupload');
 
     zone.addEventListener('click', () => fileInput.click());
@@ -269,6 +277,7 @@
         resultMessage.className = 'message error';
         resultMessage.textContent = data.error || '处理失败';
         fileList.innerHTML = '';
+        actionsEl.innerHTML = '';
         return;
       }
       resultMessage.className = 'message success';
@@ -280,6 +289,11 @@
           <a class="btn btn-primary download" href="${API_BASE ? API_BASE + '/' : ''}api/download/${outputId}/${encodeURIComponent(f.name)}" download>下载</a>
         </li>
       `).join('');
+
+      const downloadAllUrl = data.download_all_url || (outputId ? `/api/download_all/${outputId}` : '');
+      actionsEl.innerHTML = downloadAllUrl
+        ? `<a class="btn btn-primary" href="${downloadAllUrl}" download>一键下载全部（ZIP）</a>`
+        : '';
     }
 
     function escapeHtml(s) {
