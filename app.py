@@ -2,6 +2,7 @@
 """
 Temu 活动申报价格处理：上传 Excel，按 SKU 尺寸规则处理价格并拆分为多文件。
 """
+import logging
 import os
 import re
 import uuid
@@ -9,17 +10,39 @@ from pathlib import Path
 
 import pandas as pd
 from flask import Flask, request, jsonify, send_file, send_from_directory
+from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.utils import secure_filename
 
-app = Flask(__name__, static_folder="static")
+# 以当前文件所在目录为根，避免从其他目录启动时 static/uploads/outputs 找不到
+BASE_DIR = Path(__file__).resolve().parent
+UPLOAD_DIR = BASE_DIR / "uploads"
+OUTPUT_DIR = BASE_DIR / "outputs"
+
+app = Flask(__name__, static_folder=str(BASE_DIR / "static"))
 app.config["MAX_CONTENT_LENGTH"] = 50 * 1024 * 1024  # 50MB
-UPLOAD_DIR = Path("uploads")
-OUTPUT_DIR = Path("outputs")
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+@app.errorhandler(RequestEntityTooLarge)
+def too_large(e):
+    return jsonify({"success": False, "error": "文件过大，请小于 50MB"}), 413
+
+
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({"success": False, "error": "接口不存在"}), 404
+
+
+@app.errorhandler(500)
+def server_error(e):
+    logger.exception("Internal Server Error")
+    return jsonify({"success": False, "error": "服务器内部错误"}), 500
 ALLOWED = {"xlsx", "xls"}
 
 # 尺寸规则: (关键字, 最低价, 达标后固定价格)
 SIZE_RULES = [
-    ("24-12*16in", 76.4, 76.4),
+    ("24-12*16in", 70, 70),
     ("24-16*20in", 103, 103),
     ("36-12*16in", 114, 114),
     ("36-16*20in", 145, 145),
@@ -164,6 +187,7 @@ def upload():
         result = process_excel(path)
         return jsonify(result)
     except Exception as e:
+        logger.exception("处理 Excel 失败")
         return jsonify({"success": False, "error": str(e)}), 500
     finally:
         try:

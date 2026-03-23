@@ -171,7 +171,7 @@
       <h2>活动申报价格处理规则说明</h2>
       <div class="rules">
         <ul>
-          <li><strong>24-12×16in</strong>：活动申报价格 &lt; 76.4 则删除该行；≥ 76.4 则固定为 76.4</li>
+          <li><strong>24-12×16in</strong>：活动申报价格 &lt; 70 则删除该行；≥ 70 则固定为 70</li>
           <li><strong>24-16×20in</strong>：活动申报价格 &lt; 103 则删除该行；≥ 103 则固定为 103</li>
           <li><strong>36-12×16in</strong>：活动申报价格 &lt; 114 则删除该行；≥ 114 则固定为 114</li>
           <li><strong>36-16×20in</strong>：活动申报价格 &lt; 145 则删除该行；≥ 145 则固定为 145</li>
@@ -233,15 +233,28 @@
       fileInput.value = '';
     });
 
+    const API_BASE = (() => {
+      const p = window.location.pathname;
+      return p.endsWith('/') ? p.slice(0, -1) : p || '';
+    })();
+
     async function upload(file) {
       loading.classList.add('visible');
       resultEl.classList.remove('visible');
       const form = new FormData();
       form.append('file', file);
+      const url = (API_BASE ? API_BASE + '/' : '') + 'api/upload';
 
       try {
-        const res = await fetch('/api/upload', { method: 'POST', body: form });
-        const data = await res.json();
+        const res = await fetch(url, { method: 'POST', body: form });
+        const ct = res.headers.get('content-type') || '';
+        let data;
+        if (ct.includes('application/json')) {
+          data = await res.json();
+        } else {
+          const text = await res.text();
+          data = { success: false, error: res.ok ? '响应格式错误' : ('请求失败 ' + res.status + (text.slice(0, 100) || '')) };
+        }
         showResult(data);
       } catch (e) {
         showResult({ success: false, error: '网络错误：' + e.message });
@@ -264,7 +277,7 @@
       fileList.innerHTML = (data.files || []).map(f => `
         <li>
           <span class="name">${escapeHtml(f.name)}</span>
-          <a class="btn btn-primary download" href="/api/download/${outputId}/${encodeURIComponent(f.name)}" download>下载</a>
+          <a class="btn btn-primary download" href="${API_BASE ? API_BASE + '/' : ''}api/download/${outputId}/${encodeURIComponent(f.name)}" download>下载</a>
         </li>
       `).join('');
     }
